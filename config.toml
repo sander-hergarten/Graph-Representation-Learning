@@ -1,0 +1,33 @@
+# Offline Deep RL Project Configuration
+
+[environment]
+name = "CartPole-v1"
+# Add any additional environment-specific configuration here
+
+[agent]
+name = "DQN"
+# Add any additional agent-specific configuration here
+
+[training]
+num_episodes = 1000
+max_steps_per_episode = 500
+# Add any additional training-specific configuration here
+
+[exploration]
+epsilon_start = 1.0
+epsilon_end = 0.01
+epsilon_decay = 0.99
+# Add any additional exploration-specific configuration here
+
+[replay_buffer]
+buffer_size = 10000
+batch_size = 32
+# Add any additional replay buffer-specific configuration here
+
+[network]
+input_dim = 4
+hidden_dim = 128
+output_dim = 2
+# Add any additional network-specific configuration here
+
+# Add any additional sections or configuration parameters as needed

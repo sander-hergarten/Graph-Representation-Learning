@@ -1,0 +1,3 @@
+
+def from_observations(observations):
+    ...
