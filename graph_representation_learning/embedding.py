@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 
 SOURCE_DIR = os.environ["EMBEDDING_MODELS_DIR"]
-print(config)
 model_path = (
     Path(SOURCE_DIR)
     / config["embedding"]["embedding_model"]
