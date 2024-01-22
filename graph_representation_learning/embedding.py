@@ -1,17 +1,18 @@
-from ..utils import config
+from .utils import config
 import tensorflow as tf
 import os
 from pathlib import Path
 
-SOURCE_DIR = os.environ["SOURCE_DIR"]
-model_path = Path(SOURCE_DIR) / config["embedding_model"] / config["dataset"]
+SOURCE_DIR = os.environ["EMBEDDING_MODELS_DIR"]
+print(config)
+model_path = (
+    Path(SOURCE_DIR)
+    / config["embedding"]["embedding_model"]
+    / config["dataset"]["name"]
+)
 
 
-def from_observations(observations):
-    model = _load_model_from_file()
-    embeddings = model.embed(observations)
+def from_observations(observations, model_path: os.PathLike = model_path):
+    model = tf.keras.models.load_model(model_path)
+    embeddings = model(observations)
     return embeddings
-
-
-def _load_model_from_file() -> tf.keras.Model:
-    return tf.keras.models.load_model(model_path)

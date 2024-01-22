@@ -1,0 +1,14 @@
+{
+    "shapes": {
+        "testing_model": {
+            "test": {
+                "input": [
+                    32
+                ],
+                "output": [
+                    10
+                ]
+            }
+        }
+    }
+}
