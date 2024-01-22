@@ -18,6 +18,8 @@ epsilon_start = 1.0
 epsilon_end = 0.01
 epsilon_decay = 0.99
 # Add any additional exploration-specific configuration here
+[embedding]
+embedding_model = ""
 
 [replay_buffer]
 buffer_size = 10000
@@ -28,6 +30,6 @@ batch_size = 32
 input_dim = 4
 hidden_dim = 128
 output_dim = 2
-# Add any additional network-specific configuration here
 
-# Add any additional sections or configuration parameters as needed
+[dataset]
+name=''
