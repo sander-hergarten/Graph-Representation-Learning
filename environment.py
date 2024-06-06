@@ -2,7 +2,7 @@ import gymnasium
 from gymnasium.spaces import Dict, Box, Tuple, Space, Sequence
 import numpy as np
 import rustworkx as rx
-from typing import TypeVar, Any, TypedDict
+from typing import TypeVar, Any, TypedDict 
 import torch
 from torch import nn
 
@@ -16,6 +16,8 @@ Terminated = bool
 Truncated = bool
 Info = dict[str, Any]
 Done = bool
+
+CollectionBuffer = list[tuple[rx.PyDiGraph, list[torch.Tensor]]]
 
 def get_edge_list_data(graph:rx.PyDiGraph):
     edge_list_indices = graph.edge_list()
@@ -65,16 +67,19 @@ class Decoder(nn.module):
 class GraphLearnerEnv(gymnasium.env):
     graph: rx.PyDigraph
     decoder: Decoder
+    record: list[CollectionBuffer]
 
-
-    def __init__(self, node_data_size, embedding_size, render_mode):
+    def __init__(self, node_data_size, embedding_size, render_mode, decoder_learning_rate = 1e-3):
         super().__init__()
         mse = nn.MSELoss()
+
+
         # ?
         self.input_shape= node_data_size
         self.loss_function = lambda y_true, y_pred: torch.sqrt(mse[y_true, y_pred])
         #?/
         self.decoder = Decoder(64, node_data_size, embedding_size)
+        self.optimizer = torch.optim.Adam(self.decoder.parameters(), lr=decoder_learning_rate)
 
         self.node_data_size = node_data_size
         self.embedding_size = embedding_size
@@ -123,8 +128,17 @@ class GraphLearnerEnv(gymnasium.env):
         truncated = False
         info = {"predicted_embedding": embedding}
 
-        return (observation, reward, terminated, truncated, info)
+        self.record[-1].append((self.graph, action["embedd"]))
 
+        return (observation, reward, terminated, truncated, info)
+    
+    def train_decoder(self, data, collection:int):
+        ...
+
+    def add_collection_buffer(self):
+        self.record.append([])
+        
+        
     def reset(self):
         super().reset(seed=None)
         self.graph = rx.PyDiGraph()        
