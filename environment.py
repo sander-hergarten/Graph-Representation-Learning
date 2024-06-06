@@ -132,8 +132,19 @@ class GraphLearnerEnv(gymnasium.env):
 
         return (observation, reward, terminated, truncated, info)
     
-    def train_decoder(self, data, collection:int):
-        ...
+    def train_decoder(self, data, collection:int = -1):
+        collection_buffer = self.record[collection]
+
+        for sample in collection_buffer:
+            edge_list = get_edge_list_data(sample[0])
+            result = self.decoder(edge_list)
+            loss = self.loss_function(sample[1], result)
+            loss.backward()
+
+            self.optimizer.step()
+
+        return loss 
+
 
     def add_collection_buffer(self):
         self.record.append([])
