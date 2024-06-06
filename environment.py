@@ -160,3 +160,11 @@ class GraphLearnerEnv(gymnasium.env):
     def render(self):
         raise NotImplementedError() 
 
+# Register env
+def register_env(node_data_size, embedding_size, render_mode)-> str:
+    env_name= ""
+    gymnasium.envs.registration.EnvSpec(id = env_name, entrypoint =lambda : GraphLearnerEnv(node_data_size, embedding_size, render_mode))
+    
+    return env_name
+
+
