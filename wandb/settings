@@ -1,0 +1,5 @@
+[default]
+entity = sander_hergarten
+project = graph-representation-learning
+base_url = https://api.wandb.ai
+

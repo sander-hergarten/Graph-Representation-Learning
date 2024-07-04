@@ -3,13 +3,14 @@ from gymnasium.spaces import Dict, Box, Tuple, Space, Sequence
 import numpy as np
 import rustworkx as rx
 from rustworkx.visualization import graphviz_draw
-from typing import  Any, TypedDict, Optional
+from typing import Any, TypedDict, Optional
 import torch
-import time 
+import time
 import os
 from pathlib import Path
 from torch import nn
 import ffmpeg
+
 
 class ActType(TypedDict):
     edges: tuple[torch.Tensor, torch.Tensor]
@@ -26,11 +27,12 @@ Done = bool
 CollectionBuffer = list[tuple[rx.PyDiGraph, torch.Tensor]]
 
 
-def images_directory_to_mp4(images_path:Path, out_path:Path = Path.cwd(), framerate: int = 10):
+def images_directory_to_mp4(
+    images_path: Path, out_path: Path = Path.cwd(), framerate: int = 10
+):
     (
-        ffmpeg
-        .input(images_path / '*.jpg', pattern_type='glob', framerate=framerate)
-        .output(out_path / 'movie.mp4')
+        ffmpeg.input(images_path / "*.jpg", pattern_type="glob", framerate=framerate)
+        .output(out_path / "movie.mp4")
         .run()
     )
 
@@ -88,9 +90,10 @@ class GraphLearnerEnv(gymnasium.Env):
         super().__init__()
         mse = nn.MSELoss()
 
+        # ?
         self.input_shape = node_data_size
         self.loss_function = lambda y_true, y_pred: torch.sqrt(mse(y_true, y_pred))
-
+        # ?/
         self.decoder = Decoder(64, node_data_size, embedding_size)
         self.optimizer = torch.optim.Adam(
             self.decoder.parameters(), lr=decoder_learning_rate
@@ -102,8 +105,7 @@ class GraphLearnerEnv(gymnasium.Env):
 
     @property
     def action_space(self):
-        node_data_space = Box(low=0, high=1, shape=self.node_data_size)
-        edge_data_space = Tuple((node_data_space, node_data_space))
+        edge_data_space = Box(low=0, high=1, shape=self.node_data_size * 2)
         return Dict(
             {
                 "edges": edge_data_space,
@@ -113,8 +115,7 @@ class GraphLearnerEnv(gymnasium.Env):
 
     @property
     def observation_space(self):
-        node_data_space = Box(low=0, high=1, shape=self.node_data_size)
-        edge_data_space = Tuple((node_data_space, node_data_space))
+        edge_data_space = Box(low=0, high=1, shape=self.node_data_size * 2)
         edge_sequence_space = Sequence(edge_data_space)
 
         return edge_sequence_space
@@ -172,20 +173,19 @@ class GraphLearnerEnv(gymnasium.Env):
         collection_buffer = self.record[collection][produced_frames:]
 
         images = []
-        
+
         for frame in collection_buffer:
             images.append(graphviz_draw(frame[0]))
 
         return images
 
-    def save_image_sequence(self, images, path, run_name:Optional[str] =None):
+    def save_image_sequence(self, images, path, run_name: Optional[str] = None):
         directory_name = f"{run_name if run_name else time.time()}"
-        path = Path(path)/directory_name
+        path = Path(path) / directory_name
         os.makedirs(directory_name)
 
         for index, image in enumerate(images):
             image.save(path / str(index))
-
 
     def add_collection_buffer(self):
         self.record.append([])
