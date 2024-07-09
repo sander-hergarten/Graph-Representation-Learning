@@ -12,11 +12,9 @@ from torch import nn
 import ffmpeg
 
 
-class ActType(TypedDict):
-    edges: tuple[torch.Tensor, torch.Tensor]
-    embedd: torch.Tensor
 
 
+ActType = tuple[torch.Tensor, torch.Tensor]
 ObsType = list[tuple[torch.Tensor, torch.Tensor]]
 RewardType = torch.Tensor
 Terminated = bool
@@ -60,6 +58,8 @@ def _quotient_graph_edges(partition, graph):
 
     return edge_list
 
+def load_batch(shuffle=True):
+    pass    
 
 class Decoder(nn.Module):
     def __init__(self, recurrent_layer_size, input_size, output_size):
@@ -80,7 +80,7 @@ class Decoder(nn.Module):
 
 
 class GraphLearnerEnv(gymnasium.Env):
-    graph: rx.PyDigraph
+    graph: rx.PyDiGraph
     decoder: Decoder
     record: list[CollectionBuffer]
 
@@ -94,7 +94,7 @@ class GraphLearnerEnv(gymnasium.Env):
         self.input_shape = node_data_size
         self.loss_function = lambda y_true, y_pred: torch.sqrt(mse(y_true, y_pred))
         # ?/
-        self.decoder = Decoder(64, node_data_size, embedding_size)
+        self.decoder = Decoder(64, 2*node_data_size, embedding_size)
         self.optimizer = torch.optim.Adam(
             self.decoder.parameters(), lr=decoder_learning_rate
         )
@@ -103,19 +103,15 @@ class GraphLearnerEnv(gymnasium.Env):
         self.embedding_size = embedding_size
         self.render_mode = render_mode
 
+        self.initial_embedding = torch.ones(embedding_size)
+
     @property
     def action_space(self):
-        edge_data_space = Box(low=0, high=1, shape=self.node_data_size * 2)
-        return Dict(
-            {
-                "edges": edge_data_space,
-                "embedd": Box(low=-np.inf, high=np.inf, shape=self.embedding_size),
-            }
-        )
+        return Box(low=0, high=1, shape=(self.node_data_size * 2,))
 
     @property
     def observation_space(self):
-        edge_data_space = Box(low=0, high=1, shape=self.node_data_size * 2)
+        edge_data_space = Box(low=0, high=1, shape=(self.node_data_size * 2,))
         edge_sequence_space = Sequence(edge_data_space)
 
         return edge_sequence_space
@@ -194,18 +190,18 @@ class GraphLearnerEnv(gymnasium.Env):
         super().reset(seed=None)
         self.graph = rx.PyDiGraph()
 
-        return ([], {})
+        return ([(torch.zeros(self.input_shape*2), self.initial_embedding)], {})
 
     def render(self):
         raise NotImplementedError()
 
 
 # Register env
-def register_env(node_data_size, embedding_size, render_mode) -> str:
-    env_name = f"GraphLearner-{node_data_size}-{embedding_size}-{register_env}"
+def register_env(node_data_size, embedding_size) -> str:
+    env_name = f"GraphLearner-{node_data_size}-{embedding_size}"
     gymnasium.register(
         id=env_name,
-        entrypoint=lambda: GraphLearnerEnv(node_data_size, embedding_size, render_mode),
+        entry_point=lambda: GraphLearnerEnv(node_data_size, embedding_size, render_mode="human"),
     )
 
     return env_name

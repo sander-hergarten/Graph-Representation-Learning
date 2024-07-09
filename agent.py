@@ -85,11 +85,19 @@ class Args:
 
 
 def make_env(env_id, idx, capture_video, run_name, gamma):
+    if env_id.startswith("GraphLearner"):
+        import environment
+
+        _, node_data_size, embedding_size = env_id.split("-")
+
+        environment.register_env(int(node_data_size), int(embedding_size))
+
     def thunk():
         if capture_video and idx == 0:
             env = gym.make(env_id, render_mode="rgb_array")
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
+            print(env_id)
             env = gym.make(env_id)
         env = gym.wrappers.FlattenObservation(
             env
@@ -114,9 +122,13 @@ def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
 class Agent(nn.Module):
     def __init__(self, envs):
         super().__init__()
+
+
+        self.gru_cell = nn.GRUCell(np.array(envs.single_observation_space.feature_space.shape).prod(), 256)
+
         self.critic = nn.Sequential(
             layer_init(
-                nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)
+                nn.Linear(256, 64)
             ),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
@@ -125,7 +137,7 @@ class Agent(nn.Module):
         )
         self.actor_mean = nn.Sequential(
             layer_init(
-                nn.Linear(np.array(envs.single_observation_space.shape).prod(), 64)
+                nn.Linear(256, 64)
             ),
             nn.Tanh(),
             layer_init(nn.Linear(64, 64)),
@@ -138,11 +150,26 @@ class Agent(nn.Module):
             torch.zeros(1, np.prod(envs.single_action_space.shape))
         )
 
+    def forward_gru(self, input):
+        batch_size, seq_len, _ = input[0].shape[0], input[0].shape[1]
+        hidden = torch.zeros(batch_size, 256)
+
+        for t in range(seq_len):
+            concatenated_input = torch.cat([item[:, t, :] for item in input], dim=-1)
+            hidden = self.gru_cell(concatenated_input, hidden)
+
+        return hidden
+            
+
+
     def get_value(self, x):
-        return self.critic(x)
+        gru_output = self.forward_gru(x)
+        return self.critic(gru_output)
 
     def get_action_and_value(self, x, action=None):
-        action_mean = self.actor_mean(x)
+        gru_output = self.forward_gru(x)
+
+        action_mean = self.actor_mean(gru_output)
         action_logstd = self.actor_logstd.expand_as(action_mean)
         action_std = torch.exp(action_logstd)
         probs = Normal(action_mean, action_std)
@@ -152,7 +179,7 @@ class Agent(nn.Module):
             action,
             probs.log_prob(action).sum(1),
             probs.entropy().sum(1),
-            self.critic(x),
+            self.critic(gru_output),
         )
 
 
